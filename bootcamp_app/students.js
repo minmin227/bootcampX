@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const myargs = process.argv.slice(2);
 
 const pool = new Pool ({
   user: 'vagrant',
@@ -8,27 +7,22 @@ const pool = new Pool ({
   database: 'vagrant'
 })
 
-  pool.query(`
-  SELECT students.id as id, students.name as student, cohorts.name as cohort
-  FROM students JOIN cohorts ON cohort_id = cohorts.id
-  LIMIT 5;
-  `)
+const cohortName = process.argv[2];
+const limit = process.argv[3] || 5;
+// Store all potentially malicious values in an array. 
+const values = [`%${cohortName}%`, limit];
+const queryString = `
+  SELECT students.id as student_id, students.name as name, cohorts.name as cohort
+  FROM students
+  JOIN cohorts ON cohorts.id = cohort_id
+  WHERE cohorts.name LIKE $1
+  LIMIT $2;
+  `;
+
+pool.query(queryString, values)
   .then(res => {
-    res.rows.forEach (user => {
-      console.log(`${user.student} has and id of ${user.id} and was in cohort named ${user.cohort}`);
-    })
+console.log(res.rows)
   })
   .catch(err => console.error('query error', err.stack));
 
 
-  pool.query(`
-  SELECT students.name as student, students.id as id, cohorts.name as cohort
-  FROM students JOIN cohorts ON cohort_id = cohorts.id
-  WHERE cohorts.name LIKE '%myargs[0]%'
-  `)
-  .then(res => {
-    res.rows.forEach (user => {
-      console.log(`${user.student} has and id of ${user.id} and was in cohort named ${user.cohort}`);
-    })
-  })
-  .catch(err => console.error('query error', err.stack));
